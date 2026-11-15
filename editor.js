@@ -96,6 +96,7 @@
     btn.addEventListener('click', async () => {
       try{
         await navigator.clipboard.writeText(getText());
+        VaultSafety.clipboardCopied();
         announce('Copiato');
         btn.textContent = 'copiato';
         setTimeout(()=>{ btn.textContent = 'copia'; }, 1200);
@@ -1205,6 +1206,7 @@
   // ---------- lock ----------
   $('btnLock').addEventListener('click', () => {
     if (dirty && !confirm('Ci sono modifiche NON esportate: bloccando andranno perse. Bloccare comunque?')) return;
+    VaultSafety.clearClipboardNow();
     dirty = false;
     openIds.clear();
     vault = null;
@@ -1218,6 +1220,13 @@
     clearMsg(vaultMsg);
     $('btnImportVault').focus();
   });
+
+  // Blocco automatico: solo se non ci sono modifiche da esportare e nessuna finestra è aperta
+  // (mai perdere lavoro non salvato).
+  VaultSafety.startAutoLock((reason) => {
+    $('btnLock').click();
+    showMsg($('setupMsg'), 'Vault bloccato per sicurezza: ' + (reason === 'sfondo' ? 'l\'app è rimasta in secondo piano più di un minuto' : 'nessuna attività per ' + VaultSafety.INACTIVITY_MINUTES + ' minuti') + '. Non c\'erano modifiche da esportare.', 'warn');
+  }, () => !!vault && !dirty && !document.querySelector('.modal-bg.show'));
 
 })();
 

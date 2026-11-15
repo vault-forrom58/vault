@@ -45,7 +45,7 @@
   }
 
   async function copyText(t){
-    try{ await navigator.clipboard.writeText(t); return true; }catch(e){}
+    try{ await navigator.clipboard.writeText(t); VaultSafety.clipboardCopied(); return true; }catch(e){}
     try{
       var ta = document.createElement('textarea');
       ta.value = t; ta.setAttribute('readonly','');
@@ -245,6 +245,9 @@
     var f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
+    openFile(f);
+  });
+  function openFile(f){
     clearMsg($('startMsg'));
     if (!(window.crypto && crypto.subtle)){
       showMsg($('startMsg'), 'Web Crypto non disponibile in questo contesto (serve una pagina sicura). Impossibile decifrare.', 'err');
@@ -260,7 +263,7 @@
     $('bioChk').checked = !!bio;
     setBioMode(bio);
     if (bio) startBio(true); else $('pw').focus();
-  });
+  }
 
   function setBioMode(on){
     $('bioArea').classList.toggle('hidden', !on);
@@ -317,6 +320,7 @@
     try{
       var obj = await window.VaultCrypto.openVault(imageData, pw);
       entries = obj.entries;
+      lastFile = pendingFile; // per riproporre lo sblocco dopo un blocco automatico
       pendingFile = null;
       resetPwPanel();
       $('pwPanel').classList.add('hidden');
@@ -381,7 +385,19 @@
 
   $('q').addEventListener('input', function(){ if (entries) render(); });
 
-  $('btnLock').addEventListener('click', function(){
+  var lastFile = null;
+  $('btnLock').addEventListener('click', function(){ lockVault(); lastFile = null; });
+  // Blocco automatico: dopo il blocco si ripropone subito lo sblocco dello stesso PNG
+  VaultSafety.startAutoLock(function(reason){
+    var f = lastFile;
+    lockVault();
+    if (f){
+      openFile(f);
+      showMsg($('pwMsg'), 'Vault bloccato per sicurezza: ' + (reason === 'sfondo' ? 'l\'app è rimasta in secondo piano più di un minuto' : 'nessuna attività per ' + VaultSafety.INACTIVITY_MINUTES + ' minuti') + '.', 'warn');
+    }
+  }, function(){ return entries !== null; });
+  function lockVault(){
+    VaultSafety.clearClipboardNow();
     entries = null;
     openKeys = {};
     clearMsg($('bioMsg'));
@@ -396,6 +412,6 @@
     $('btnLock').classList.add('hidden');
     document.documentElement.classList.remove('unlocked');
     $('btnLoad').focus();
-  });
+  }
 })();
 
