@@ -245,7 +245,11 @@
     var f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
-    openFile(f);
+    // Copia in memoria del PNG (resta cifrato): dopo un blocco automatico lo sblocco si
+    // ripropone senza rileggere il file, perché Android può revocarne l'accesso.
+    f.arrayBuffer().then(function(buf){
+      openFile(new File([buf], f.name, { type: f.type || 'image/png' }));
+    }, function(){ openFile(f); });
   });
   function openFile(f){
     clearMsg($('startMsg'));
