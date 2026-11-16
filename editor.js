@@ -938,7 +938,7 @@
   }
   function exportFileName(){
     const d = new Date(), p = n => String(n).padStart(2,'0');
-    return 'vault-' + d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
+    return 'foto-' + d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
            '_' + p(d.getHours()) + '-' + p(d.getMinutes()) + '.png';
   }
 
@@ -1001,11 +1001,16 @@
       'Chiunque apra il file potrà leggerle direttamente. Continuare?'
     );
     if (!step1) return;
-    const step2 = confirm(
+    const step2 = prompt(
       'Conferma: il file TXT non sarà protetto in alcun modo. '+
-      'Se lo conservi, tienilo in un posto sicuro (es. cifrato separatamente) ed eliminalo quando non ti serve più. Procedere con l\'esportazione?'
+      'Se lo conservi, tienilo in un posto sicuro ed eliminalo quando non ti serve più. '+
+      'Per procedere scrivi ESPORTA.'
     );
-    if (!step2) return;
+    if (step2 === null) return;
+    if (step2.trim().toUpperCase() !== 'ESPORTA'){
+      showMsg(vaultMsg, 'Esportazione annullata: non è stata scritta la parola ESPORTA.', 'err');
+      return;
+    }
 
     const now = new Date();
     const lines = [];
@@ -1033,8 +1038,9 @@
       lines.push('-'.repeat(60));
     });
     const blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
-    downloadBlob(blob, 'vault-in-chiaro-' + now.toISOString().slice(0,10) + '.txt');
-    showMsg(vaultMsg, 'Backup in chiaro esportato. File non protetto: conservalo con cautela.', 'warn');
+    const txtName = 'note-' + now.toISOString().slice(0,10) + '.txt';
+    downloadBlob(blob, txtName);
+    showMsg(vaultMsg, 'Esportato "' + txtName + '" con tutte le password IN CHIARO. Copialo dove ti serve, poi CANCELLALO dai Download.', 'warn');
   });
 
   // ---------- importazione da TXT in chiaro ----------
@@ -1119,6 +1125,7 @@
     if (duplicates) msg += ', '+duplicates+' ignorate perché già presenti';
     if (parsed.invalid) msg += ', '+parsed.invalid+' scartate perché senza sito/servizio';
     msg += '. Esporta il vault (PNG) per rendere permanente la modifica.';
+    msg += ' Poi CANCELLA "' + file.name + '" dai Download: contiene le password in chiaro.';
     showMsg(vaultMsg, msg, (added || duplicates) ? 'warn' : 'err');
   });
 
@@ -1155,6 +1162,7 @@
   });
   $('btnConfirmSic').addEventListener('click', async () => {
     if (sicBusy || !sicFile || !vault) return;
+    const sicName = sicFile.name;
     const msgEl = $('sicMsg');
     const pw = $('sicPw').value;
     if (!pw){ showMsg(msgEl, 'Scrivi la password di SafeInCloud.', 'err'); $('sicPw').focus(); return; }
@@ -1201,6 +1209,7 @@
     const used = new TextEncoder().encode(JSON.stringify(vault)).length + 28;
     if (used > cap) msg += ' ATTENZIONE: l\'immagine è troppo piccola, tocca "Rigenera immagine" per crearne una più grande prima di esportare.';
     else msg += ' Controlla le voci, poi esporta il vault (PNG).';
+    msg += ' Poi CANCELLA "' + sicName + '" (il file di SafeInCloud) dai Download.';
     showMsg(vaultMsg, msg, added ? 'warn' : 'err');
     $('vaultTitle').focus();
   });
