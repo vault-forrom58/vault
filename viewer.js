@@ -336,6 +336,8 @@
       if ($('bioChk').checked && window.VaultBio && VaultBio.isSupported() && !VaultBio.isEnabled()){
         VaultBio.enable(pw).then(function(){
           showMsg($('bioMsg'), 'Sblocco con impronta attivato. La master password resta indispensabile sugli altri dispositivi: non dimenticarla.', 'ok');
+          // Il messaggio sparisce da solo dopo 30 secondi (se nel frattempo non è stato sostituito)
+          setTimeout(function(){ var m = $('bioMsg'); if (m.textContent.indexOf('Sblocco con impronta attivato') === 0) clearMsg(m); }, 30000);
         }, function(err){
           showMsg($('bioMsg'), 'Impronta non attivata. ' + VaultBio.messageFor(err), 'err');
         });

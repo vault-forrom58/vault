@@ -504,6 +504,8 @@
     try{
       await VaultBio.enable(masterPassword);
       showMsg(vaultMsg, 'Sblocco con impronta attivato su questo telefono. La master password resta valida e indispensabile sugli altri dispositivi: non dimenticarla.', 'ok');
+      // Il messaggio sparisce da solo dopo 30 secondi (se nel frattempo non è stato sostituito)
+      setTimeout(() => { if (vaultMsg.textContent.startsWith('Sblocco con impronta attivato')) clearMsg(vaultMsg); }, 30000);
     }catch(err){
       showMsg(vaultMsg, VaultBio.messageFor(err), 'err');
     }finally{
