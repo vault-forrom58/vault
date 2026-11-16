@@ -330,6 +330,30 @@
 
   // ---------- modifiche non esportate (protezione da perdita dati) ----------
   let dirty = false;
+  // Pulizia una tantum del campo "Etichette" creato dall'importazione SafeInCloud.
+  // Si chiede una volta: se si risponde No, non viene più chiesto su questo telefono/PC.
+  const NO_LABELS_KEY = 'vault-etichette-no';
+  function offerRemoveLabels(){
+    if (!vault) return;
+    try{ if (localStorage.getItem(NO_LABELS_KEY) === '1') return; }catch(e){}
+    const isLabel = f => f && f.name === 'Etichette' && !f.secret;
+    const withLabels = vault.entries.filter(e => (e.fields || []).some(isLabel));
+    if (!withLabels.length) return;
+    const n = withLabels.length;
+    if (!confirm(n + (n === 1 ? ' voce ha' : ' voci hanno') + ' il campo "Etichette" (importato da SafeInCloud). Toglierlo da tutte?')){
+      try{ localStorage.setItem(NO_LABELS_KEY, '1'); }catch(e){}
+      return;
+    }
+    withLabels.forEach(e => {
+      e.fields = e.fields.filter(f => !isLabel(f));
+      if (!e.fields.length) delete e.fields;
+    });
+    setDirty(true);
+    renderEntries();
+    updateCapacityGauge();
+    showMsg(vaultMsg, 'Campo "Etichette" tolto da ' + n + (n === 1 ? ' voce' : ' voci') + '. Ora esporta il vault (PNG) per rendere permanente la modifica.', 'warn');
+  }
+
   function setDirty(v){
     dirty = v;
     if (vault) setStatus(true, v ? 'sbloccato — modifiche NON esportate' : 'sbloccato — tutto esportato');
@@ -477,6 +501,7 @@
       updateCapacityGauge();
       pendingImportFile = null;
       $('vaultTitle').focus();
+      setTimeout(offerRemoveLabels, 300);
     }catch(err){
       setUnlocking(false);
       showMsg(pwMsg, 'Password errata, oppure il file non è un vault valido creato da questa app.', 'err');
