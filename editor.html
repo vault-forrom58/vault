@@ -162,8 +162,8 @@
     <div class="row">
       <button class="primary" id="btnNewVault">Nuovo vault</button>
       <button id="btnImportVault">Carica vault (PNG)</button>
-      <!-- solo application/octet-stream: su Android Chrome apre le app dei file, senza Google Foto né Fotocamera -->
-      <input type="file" id="fileImport" accept="application/octet-stream" class="hidden">
+      <!-- accept: Android = application/octet-stream (apre le app dei file, senza Google Foto né Fotocamera); altrove = PNG. Lo imposta lo script della pagina. -->
+      <input type="file" id="fileImport" accept=".png,image/png" class="hidden">
     </div>
     <div class="msg" role="status" aria-live="polite" id="setupMsg"></div>
   </div>

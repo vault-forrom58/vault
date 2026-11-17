@@ -428,6 +428,9 @@
   $('btnImportVault').addEventListener('click', () => {
     $('fileImport').click();
   });
+  // Su Android "solo file generici" apre direttamente le app dei file (Files, CX) invece di
+  // Google Foto/Fotocamera; su Windows invece nasconderebbe i PNG, quindi lì resta ".png".
+  if (/Android/i.test(navigator.userAgent)) $('fileImport').setAttribute('accept', 'application/octet-stream');
   $('fileImport').addEventListener('change', (e) => {
     const file = e.target.files[0];
     e.target.value = '';
