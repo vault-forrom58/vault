@@ -162,7 +162,8 @@
     <div class="row">
       <button class="primary" id="btnNewVault">Nuovo vault</button>
       <button id="btnImportVault">Carica vault (PNG)</button>
-      <input type="file" id="fileImport" accept="image/png" class="hidden">
+      <!-- application/octet-stream: su Android Chrome apre le cartelle del telefono invece della galleria Google Foto -->
+      <input type="file" id="fileImport" accept="image/png,.png,application/octet-stream" class="hidden">
     </div>
     <div class="msg" role="status" aria-live="polite" id="setupMsg"></div>
   </div>

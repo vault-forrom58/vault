@@ -114,7 +114,8 @@
 
   <div id="startPanel" style="margin-bottom:16px;">
     <button class="primary big" id="btnLoad" type="button">Carica vault (PNG)</button>
-    <input type="file" id="fileIn" accept="image/png" class="hidden">
+    <!-- application/octet-stream: su Android Chrome apre le cartelle del telefono invece della galleria Google Foto -->
+    <input type="file" id="fileIn" accept="image/png,.png,application/octet-stream" class="hidden">
     <div class="msg" role="status" aria-live="polite" id="startMsg"></div>
   </div>
 
