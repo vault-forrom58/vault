@@ -301,6 +301,14 @@
     return { bits, lenOk, entropyOk, label, pct, color };
   }
 
+  // Valutazione di una password delle voci, con gli stessi criteri della master password.
+  function rateSitePassword(pw){
+    const i = passwordStrengthInfo(pw);
+    if (!i.lenOk || !i.entropyOk) return { word: 'debole', cls: 'weak', level: 0 };
+    if (i.bits < MIN_MASTER_PW_ENTROPY_BITS*1.4) return { word: 'accettabile', cls: 'fair', level: 1 };
+    return { word: 'robusta', cls: 'strong', level: 2 };
+  }
+
   function updatePwStrengthUI(){
     const pw = $('newPw1').value;
     const info = passwordStrengthInfo(pw);
@@ -676,6 +684,16 @@
       pwCell.appendChild(btnToggle);
       pwCell.appendChild(makeCopyButton(() => entry.pass || '', 'copia password di ' + nm));
       tdPass.appendChild(pwCell);
+      // Valutazione della password (stesso metodo della master password), più l'avviso
+      // se la stessa password è usata anche in altre voci.
+      if (entry.pass){
+        const r = rateSitePassword(entry.pass);
+        const st = document.createElement('div');
+        st.className = 'pw-strength ' + r.cls;
+        const twins = vault.entries.filter(x => x !== entry && x.pass === entry.pass).length;
+        st.textContent = r.word + (twins ? ' — uguale ad altre ' + twins + (twins === 1 ? ' voce' : ' voci') : '');
+        tdPass.appendChild(st);
+      }
       tr.appendChild(tdPass);
 
       // Campi aggiuntivi: uno per riga, i segreti nascosti con "mostra" e "copia"
@@ -971,12 +989,43 @@
   }
 
   let exporting = false;
+  // PC (Chrome/Edge): finestra "Salva con nome" che si apre nell'ultima cartella usata
+  // (es. C:\\Vault), ricordata in IndexedDB. Telefono: download normale.
+  const CAN_SAVE_PICKER = !/Android/i.test(navigator.userAgent) && typeof window.showSaveFilePicker === 'function';
+  function handleDb(){
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('vault-cartella', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('h');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  }
+  async function getLastHandle(){
+    try{ const db = await handleDb(); return await new Promise(res => { const q = db.transaction('h').objectStore('h').get('ultimo'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); }catch(e){ return null; }
+  }
+  async function setLastHandle(h){
+    try{ const db = await handleDb(); db.transaction('h', 'readwrite').objectStore('h').put(h, 'ultimo'); }catch(e){}
+  }
+
   $('btnExport').addEventListener('click', async () => {
     if (exporting) return;
     clearMsg(vaultMsg);
     if (!coverCanvas || !masterPassword || !vault){
       showMsg(vaultMsg, 'Nessun vault attivo.', 'err');
       return;
+    }
+    // La finestra va aperta subito, finché vale il clic dell'utente
+    let saveHandle = null;
+    if (CAN_SAVE_PICKER){
+      const opts = { suggestedName: exportFileName(), types: [{ description: 'Immagine PNG', accept: { 'image/png': ['.png'] } }] };
+      const last = await getLastHandle();
+      if (last) opts.startIn = last;
+      try{
+        saveHandle = await window.showSaveFilePicker(opts);
+      }catch(err){
+        if (err && err.name === 'AbortError') return; // l'utente ha annullato
+        try{ delete opts.startIn; saveHandle = await window.showSaveFilePicker(opts); }
+        catch(e2){ if (e2 && e2.name === 'AbortError') return; saveHandle = null; }
+      }
     }
     exporting = true;
     $('btnExport').disabled = true;
@@ -990,6 +1039,7 @@
         await embedPayload(clone, masterPassword, iterations, salt, iv, ciphertext);
       }catch(err){
         showMsg(vaultMsg, 'L\'immagine di copertura è troppo piccola per contenere il vault attuale. Usa un\'immagine più grande.', 'err');
+        if (saveHandle && saveHandle.remove) saveHandle.remove().catch(() => {});
         return;
       }
       const outCanvas = document.createElement('canvas');
@@ -1000,11 +1050,20 @@
         showMsg(vaultMsg, 'ESPORTAZIONE ANNULLATA: la verifica del PNG è fallita, il file sarebbe illeggibile. '+
           'Probabile causa: il browser altera le immagini (protezione anti-tracciamento, es. Brave, Firefox, Safari). '+
           'Usa Chrome o Edge, oppure disattiva quella protezione per questa pagina. Le modifiche sono ancora in memoria: non chiudere la pagina.', 'err');
+        if (saveHandle && saveHandle.remove) saveHandle.remove().catch(() => {});
         return;
       }
-      downloadBlob(blob, exportFileName());
+      let where = '';
+      if (saveHandle){
+        const w = await saveHandle.createWritable();
+        await w.write(blob); await w.close();
+        setLastHandle(saveHandle);
+        where = ' Salvato come "' + saveHandle.name + '".';
+      } else {
+        downloadBlob(blob, exportFileName());
+      }
       if (JSON.stringify(vault) === snapshot) setDirty(false);
-      showMsg(vaultMsg, 'Vault esportato e verificato. Conserva il PNG in formato originale, senza ricomprimerlo (niente WhatsApp, Google Foto, ecc.).', 'ok');
+      showMsg(vaultMsg, 'Vault esportato e verificato.' + where + ' Conserva il PNG in formato originale, senza ricomprimerlo (niente WhatsApp, Google Foto, ecc.).', 'ok');
     }catch(err){
       showMsg(vaultMsg, 'Errore nell\'esportazione: '+err.message, 'err');
     }finally{
@@ -1157,89 +1216,23 @@
     showMsg(vaultMsg, msg, (added || duplicates) ? 'warn' : 'err');
   });
 
-  // ---------- importazione da SafeInCloud (.db) ----------
-  let sicFile = null, sicBusy = false;
-  function setSicBusy(v){
-    sicBusy = v;
-    $('btnConfirmSic').disabled = v;
-    $('btnCancelSic').disabled = v;
-  }
-  function closeSic(){
-    $('sicPw').value = '';
-    sicFile = null;
-    closeModal($('sicBg'));
-  }
-  $('btnImportSic').addEventListener('click', () => {
+  // ---------- controllo di tutte le password ----------
+  $('btnCheckPw').addEventListener('click', () => {
     clearMsg(vaultMsg);
     if (!vault){ showMsg(vaultMsg, 'Nessun vault attivo.', 'err'); return; }
-    $('fileImportSic').click();
-  });
-  $('fileImportSic').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file || !vault) return;
-    sicFile = file;
-    $('sicPw').value = '';
-    clearMsg($('sicMsg'));
-    openModal($('sicBg'), $('sicPw'));
-  });
-  $('btnCancelSic').addEventListener('click', () => { if (!sicBusy) closeSic(); });
-  $('sicPw').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('btnConfirmSic').click(); } });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && $('sicBg').classList.contains('show') && !sicBusy) closeSic();
-  });
-  $('btnConfirmSic').addEventListener('click', async () => {
-    if (sicBusy || !sicFile || !vault) return;
-    const sicName = sicFile.name;
-    const msgEl = $('sicMsg');
-    const pw = $('sicPw').value;
-    if (!pw){ showMsg(msgEl, 'Scrivi la password di SafeInCloud.', 'err'); $('sicPw').focus(); return; }
-    setSicBusy(true);
-    showMsg(msgEl, 'Lettura del database in corso, attendere…', 'warn');
-    let res;
-    try{
-      res = await window.SafeInCloud.importDb(await sicFile.arrayBuffer(), pw);
-    }catch(err){
-      setSicBusy(false);
-      const m = err.message === 'PASSWORD' ? 'Password di SafeInCloud errata.'
-              : err.message === 'BROWSER' ? 'Questo browser è troppo vecchio per leggere il file: aggiorna Chrome.'
-              : 'File non riconosciuto: deve essere il database esportato da SafeInCloud (.db).';
-      showMsg(msgEl, m, 'err');
-      $('sicPw').focus();
-      return;
-    }
-    const keyOf = x => JSON.stringify([x.site, x.user, x.pass, x.notes, x.fields || []]);
-    const existing = new Set(vault.entries.map(keyOf));
-    let added = 0, duplicates = 0;
-    res.entries.forEach(en => {
-      const k = keyOf(en);
-      if (existing.has(k)){ duplicates++; return; }
-      existing.add(k);
-      const ne = { id: newEntryId(), site: en.site, user: en.user, pass: en.pass, notes: en.notes };
-      if (en.fields.length) ne.fields = en.fields;
-      vault.entries.push(ne);
-      added++;
-    });
-    setSicBusy(false);
-    closeSic();
-    if (added) setDirty(true);
-    renderEntries();
-    updateCapacityGauge();
-    // Resoconto completo, per confrontarlo con SafeInCloud
-    let msg = 'Nel file '+res.total+' schede: importate '+added;
-    if (duplicates) msg += ', già presenti '+duplicates;
-    if (res.deleted) msg += ', eliminate in SafeInCloud '+res.deleted;
-    if (res.templates) msg += ', modelli '+res.templates;
-    if (res.skippedEmpty) msg += ', vuote '+res.skippedEmpty;
-    msg += '.';
-    if (res.attachments) msg += ' Allegati non importati: '+res.attachments+'.';
-    const cap = capacityBytes(getCanvasImageData(coverCanvas));
-    const used = new TextEncoder().encode(JSON.stringify(vault)).length + 28;
-    if (used > cap) msg += ' ATTENZIONE: l\'immagine è troppo piccola, tocca "Rigenera immagine" per crearne una più grande prima di esportare.';
-    else msg += ' Controlla le voci, poi esporta il vault (PNG).';
-    msg += ' Poi CANCELLA "' + sicName + '" (il file di SafeInCloud) dai Download.';
-    showMsg(vaultMsg, msg, added ? 'warn' : 'err');
-    $('vaultTitle').focus();
+    const withPw = vault.entries.filter(e => e.pass);
+    if (!withPw.length){ showMsg(vaultMsg, 'Nessuna voce con password da controllare.', 'warn'); return; }
+    const weak = [], cnt = [0, 0, 0];
+    withPw.forEach(e => { const r = rateSitePassword(e.pass); cnt[r.level]++; if (!r.level) weak.push(e.site || 'Senza titolo'); });
+    const groups = new Map();
+    withPw.forEach(e => { if (!groups.has(e.pass)) groups.set(e.pass, []); groups.get(e.pass).push(e.site || 'Senza titolo'); });
+    const same = [...groups.values()].filter(g => g.length > 1);
+    let msg = 'Controllate ' + withPw.length + ' password: ' + cnt[2] + ' robuste, ' + cnt[1] + ' accettabili, ' + cnt[0] + ' deboli.';
+    if (weak.length) msg += ' DEBOLI: ' + weak.join(', ') + '.';
+    if (same.length) msg += ' UGUALI tra loro: ' + same.map(g => g.join(' = ')).join('; ') + '.';
+    else msg += ' Nessuna password ripetuta.';
+    if (!weak.length && !same.length) msg += ' Tutto a posto.';
+    showMsg(vaultMsg, msg, (weak.length || same.length) ? 'warn' : 'ok');
   });
 
   // ---------- lock ----------

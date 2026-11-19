@@ -104,6 +104,8 @@
   td:last-child{border-bottom:none;}
   td[data-label]::before{content:attr(data-label);display:block;font-family:var(--sans);font-size:.9rem;font-weight:700;color:var(--accent);margin-bottom:6px;}
   .pw-cell{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .pw-strength{font-size:.85rem;font-weight:700;margin-top:4px;}
+  .pw-strength.weak{color:var(--err);} .pw-strength.fair{color:var(--accent);} .pw-strength.strong{color:var(--ok);}
   .pw-mask{letter-spacing:3px;word-break:break-all;}
   .cell-actions{display:flex;gap:10px;flex-wrap:wrap;}
   tr.empty-row{border:3px dashed var(--line);padding:0;}
@@ -218,8 +220,7 @@
         <button class="small danger" id="btnExportTxt">Esporta vault (TXT, in chiaro)</button>
         <button class="small danger" id="btnImportTxt">Importa (TXT, in chiaro)</button>
         <input type="file" id="fileImportTxt" accept=".txt,text/plain" class="hidden">
-        <button class="small" id="btnImportSic">Importa da SafeInCloud (.db)</button>
-        <input type="file" id="fileImportSic" class="hidden">
+        <button class="small" id="btnCheckPw">Controlla password</button>
         <button class="small hidden" id="btnBioToggle">Attiva sblocco con impronta</button>
         <button class="small danger" id="btnLock">Blocca</button>
       </div>
@@ -324,23 +325,7 @@
   </div>
 </div>
 
-<!-- IMPORT SAFEINCLOUD MODAL -->
-<div class="modal-bg" id="sicBg">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sicTitle">
-    <h3 id="sicTitle">Importa da SafeInCloud</h3>
-    <div class="row">
-      <div class="col"><label for="sicPw">Password di SafeInCloud</label><input type="text" id="sicPw" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-    </div>
-    <div class="msg" role="status" aria-live="polite" id="sicMsg"></div>
-    <div class="modal-actions">
-      <button class="ghost" id="btnCancelSic">Annulla</button>
-      <button class="primary" id="btnConfirmSic">Importa</button>
-    </div>
-  </div>
-</div>
-
 <script src="vault-crypto.js"></script>
-<script src="safeincloud.js"></script>
 <script src="biometric.js"></script>
 <script src="sicurezza.js"></script>
 <script src="editor.js"></script>
