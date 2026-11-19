@@ -156,19 +156,20 @@
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
   /* tasti in fondo alle finestre: stessa misura degli altri tasti (come .small), scritta sempre su una riga */
   .modal-actions button{flex:1;min-width:0;min-height:44px;padding:4px 10px;font-size:.9rem;white-space:nowrap;}
-  /* finestra Controllo password */
+  /* finestra Controllo password: stesse misure del resto di Registra (titoli voce .9rem, tasti 44) */
+  .modal{overflow-x:hidden;}
   .chk-cnt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
-  .chk-c{border:3px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center;color:var(--accent);}
-  .chk-c b{display:block;font-size:1.6rem;line-height:1.2;}
-  .chk-c span{font-size:.85rem;font-weight:700;}
+  .chk-c{min-width:0;border:3px solid var(--line);border-radius:8px;padding:6px 0;text-align:center;color:var(--accent);}
+  .chk-c b{display:block;font-size:1.1rem;line-height:1.3;}
+  .chk-c span{display:block;font-size:.72rem;font-weight:700;white-space:nowrap;}
   .chk-c.strong{border-color:var(--ok);color:var(--ok);} .chk-c.weak{border-color:var(--err);color:var(--err);}
-  .chk-h{margin:18px 0 6px;font-size:1rem;color:var(--accent);} .chk-h.weak{color:var(--err);}
-  .chk-item{display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;min-height:44px;padding:6px 12px;border:2px solid var(--dim);border-radius:8px;background:var(--bg);color:var(--text);font-size:.95rem;text-align:left;}
-  .chk-item .go{color:var(--accent);font-size:.85rem;flex-shrink:0;}
-  .chk-grp{border:2px solid var(--dim);border-radius:8px;padding:4px 8px 8px;margin-top:6px;}
-  .chk-grp .chk-item{border:none;min-height:40px;padding:4px 4px;margin-top:2px;}
-  .chk-none{font-size:.95rem;color:var(--ok);margin:4px 0;}
-  .chk-note{font-size:.85rem;color:var(--accent);margin:14px 0 0;}
+  .chk-h{margin:16px 0 6px;font-size:.9rem;color:var(--accent);} .chk-h.weak{color:var(--err);}
+  .chk-item{display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;min-height:44px;padding:4px 12px;border:3px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:.9rem;font-weight:700;line-height:1.3;text-align:left;overflow-wrap:anywhere;}
+  .chk-item .go{color:var(--accent);font-size:.8rem;flex-shrink:0;}
+  .chk-grp{border:3px solid var(--line);border-radius:8px;padding:2px 8px 4px;margin-top:8px;}
+  .chk-grp .chk-item{border:none;margin-top:0;padding:4px 4px;}
+  .chk-none{font-size:.9rem;color:var(--ok);margin:4px 0;}
+  .chk-note{font-size:.8rem;color:var(--accent);margin:12px 0 0;}
 
   .strength-row{display:flex;gap:10px;align-items:center;margin-top:4px;}
   .charset-opts{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;}

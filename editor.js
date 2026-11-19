@@ -1226,7 +1226,6 @@
     const groups = new Map();
     withPw.forEach(e => { if (!groups.has(e.pass)) groups.set(e.pass, []); groups.get(e.pass).push(e); });
     const same = [...groups.values()].filter(g => g.length > 1).map(g => g.sort(byName)).sort((a, b) => byName(a[0], b[0]));
-    $('checkTitle').textContent = 'Controllo password (' + withPw.length + ')';
     $('chkStrong').textContent = cnt[2]; $('chkFair').textContent = cnt[1]; $('chkWeak').textContent = cnt[0];
     $('chkWeakTitle').textContent = 'Deboli (' + weak.length + ')';
     $('chkSameTitle').textContent = 'Uguali tra loro (' + same.length + (same.length === 1 ? ' gruppo)' : ' gruppi)');
