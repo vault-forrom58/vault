@@ -429,7 +429,6 @@
     setupPanel.classList.add('hidden');
     vaultPanel.classList.remove('hidden');
     setDirty(true);
-    updateBioToggle();
     renderEntries();
     updateCapacityGauge();
     $('vaultTitle').focus();
@@ -510,8 +509,7 @@
       vaultPanel.classList.remove('hidden');
       setDirty(false);
       setStatus(true, 'sbloccato');
-      updateBioToggle();
-      renderEntries();
+        renderEntries();
       updateCapacityGauge();
       pendingImportFile = null;
       $('vaultTitle').focus();
@@ -522,36 +520,6 @@
       $('importPw').focus();
     }
   }
-
-  // ---------- sblocco con impronta: attiva / disattiva ----------
-  function updateBioToggle(){
-    const b = $('btnBioToggle');
-    if (!window.VaultBio || !VaultBio.isSupported()){ b.classList.add('hidden'); return; }
-    b.classList.remove('hidden');
-    b.textContent = VaultBio.isEnabled() ? 'Disattiva sblocco con impronta' : 'Attiva sblocco con impronta';
-  }
-  $('btnBioToggle').addEventListener('click', async () => {
-    clearMsg(vaultMsg);
-    if (VaultBio.isEnabled()){
-      VaultBio.disable();
-      updateBioToggle();
-      showMsg(vaultMsg, 'Sblocco con impronta disattivato su questo telefono. La passkey "Vault" resta nel gestore password: se vuoi, eliminala da lì.', 'ok');
-      return;
-    }
-    if (!masterPassword) return;
-    $('btnBioToggle').disabled = true;
-    try{
-      await VaultBio.enable(masterPassword);
-      showMsg(vaultMsg, 'Sblocco con impronta attivato su questo telefono. La master password resta valida e indispensabile sugli altri dispositivi: non dimenticarla.', 'ok');
-      // Il messaggio sparisce da solo dopo 30 secondi (se nel frattempo non è stato sostituito)
-      setTimeout(() => { if (vaultMsg.textContent.startsWith('Sblocco con impronta attivato')) clearMsg(vaultMsg); }, 30000);
-    }catch(err){
-      showMsg(vaultMsg, VaultBio.messageFor(err), 'err');
-    }finally{
-      $('btnBioToggle').disabled = false;
-      updateBioToggle();
-    }
-  });
 
   // ---------- vault panel: entries ----------
   const entryBody = $('entryBody');

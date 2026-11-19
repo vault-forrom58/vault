@@ -61,6 +61,10 @@
   #setupPanel .row button{width:100%;min-height:52px;font-size:1.05rem;}
   .btncol{display:flex;flex-direction:column;gap:8px;}
   .btncol button{width:100%;}
+  /* righina corta tra i gruppi di tasti */
+  .btncol .sep{height:2px;width:60%;margin:8px auto;background:var(--line);opacity:.6;}
+  /* fondo grigio-blu per tutti i tasti funzionali (non per Home, Blocca e i tasti delle voci) */
+  #setupPanel button, #coverPanel button:not(.ghost), #vaultPanel .btncol button{background:var(--btn);}
 
   .subhead{color:var(--text);font-size:.8rem;margin:0 0 14px;line-height:1.4;}
   .subhead code{font-family:var(--mono);border:2px solid var(--line);padding:0 6px;border-radius:4px;font-size:.95rem;}
@@ -224,22 +228,23 @@
     <div>
       <h2 style="margin:0 0 10px;" id="vaultTitle" tabindex="-1">Credenziali (<span id="entryCount">0</span>)</h2>
       <div class="btncol">
+        <!-- gruppi separati da righine corte: voci / esporta / importa / strumenti -->
         <button class="small" id="btnAddEntry">+ Nuova voce</button>
+        <div class="sep" aria-hidden="true"></div>
         <button class="small primary" id="btnExport">Esporta (PNG)</button>
         <button class="small danger" id="btnExportTxt">Esporta (TXT, in chiaro)</button>
+        <div class="sep" aria-hidden="true"></div>
         <button class="small danger" id="btnImportTxt">Importa (TXT, in chiaro)</button>
         <input type="file" id="fileImportTxt" accept=".txt,text/plain" class="hidden">
+        <div class="sep" aria-hidden="true"></div>
         <button class="small" id="btnCheckPw">Controlla password</button>
-        <button class="small hidden" id="btnBioToggle">Attiva sblocco con impronta</button>
+        <button class="small" id="btnRegenCover">Rigenera immagine</button>
       </div>
     </div>
 
     <div class="gauge"><div class="gauge-fill" id="capacityFill"></div></div>
     <div class="gauge-label" id="capacityLabel">capienza: —</div>
 
-    <div class="btncol" style="margin-top:10px;margin-bottom:4px;">
-      <button class="small" id="btnRegenCover">Rigenera immagine (dimensione calcolata sui dati attuali)</button>
-    </div>
     <div class="msg" role="status" aria-live="polite" id="coverActionMsg"></div>
 
     <div class="row" style="margin-bottom:6px;">
