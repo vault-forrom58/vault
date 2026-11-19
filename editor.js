@@ -334,6 +334,9 @@
   function setStatus(unlocked, label){
     statusPill.textContent = label;
     statusPill.className = 'status-pill ' + (unlocked ? 'unlocked' : 'locked');
+    // Blocca e l'avvertenza servono solo a vault aperto
+    $('btnLock').classList.toggle('hidden', !unlocked);
+    $('subhead').classList.toggle('hidden', !unlocked);
   }
 
   // ---------- modifiche non esportate (protezione da perdita dati) ----------
@@ -359,12 +362,12 @@
     setDirty(true);
     renderEntries();
     updateCapacityGauge();
-    showMsg(vaultMsg, 'Campo "Etichette" tolto da ' + n + (n === 1 ? ' voce' : ' voci') + '. Ora esporta il vault (PNG) per rendere permanente la modifica.', 'warn');
+    showMsg(vaultMsg, 'Campo "Etichette" tolto da ' + n + (n === 1 ? ' voce' : ' voci') + '. Ora premi "Esporta (PNG)" per rendere permanente la modifica.', 'warn');
   }
 
   function setDirty(v){
     dirty = v;
-    if (vault) setStatus(true, v ? 'sbloccato — modifiche NON esportate' : 'sbloccato — tutto esportato');
+    if (vault) setStatus(true, v ? 'da esportare' : 'sbloccato');
   }
   window.addEventListener('beforeunload', (e) => {
     if (dirty){ e.preventDefault(); e.returnValue = ''; }
@@ -506,7 +509,7 @@
       setupPanel.classList.add('hidden');
       vaultPanel.classList.remove('hidden');
       setDirty(false);
-      setStatus(true, 'sbloccato — vault caricato');
+      setStatus(true, 'sbloccato');
       updateBioToggle();
       renderEntries();
       updateCapacityGauge();
@@ -1190,7 +1193,7 @@
     try{
       parsed = parsePlainTxt(await file.text());
     }catch(err){
-      showMsg(vaultMsg, 'File non riconosciuto: deve essere un TXT prodotto da "Esporta vault (TXT, in chiaro)".', 'err');
+      showMsg(vaultMsg, 'File non riconosciuto: deve essere un TXT prodotto da "Esporta (TXT, in chiaro)".', 'err');
       return;
     }
     const keyOf = x => JSON.stringify([x.site, x.user, x.pass, x.notes, x.fields || []]);
@@ -1248,7 +1251,7 @@
     searchInput.value = '';
     vaultPanel.classList.add('hidden');
     setupPanel.classList.remove('hidden');
-    setStatus(false, 'bloccato — nessun vault caricato');
+    setStatus(false, 'bloccato');
     clearMsg(vaultMsg);
     $('btnImportVault').focus();
   });

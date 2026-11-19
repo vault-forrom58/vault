@@ -51,8 +51,18 @@
   .status-pill{font-family:var(--mono);font-size:1rem;font-weight:700;padding:6px 14px;border-radius:6px;border:3px solid var(--err);color:var(--err);background:var(--bg);}
   .status-pill.unlocked{border-color:var(--ok);color:var(--ok);}
   .status-pill.locked{border-color:#ff3333;color:#ff3333;}
+  .status-pill{white-space:nowrap;}
+  /* come in Consulta: "bloccato/sbloccato" a sinistra, "Blocca" a destra, alla stessa altezza */
+  header.top{row-gap:14px;}
+  header.top .state{display:flex;align-items:stretch;justify-content:space-between;gap:10px;flex:0 0 100%;}
+  #btnLock{min-height:0;padding:0 16px;}
+  /* tasti a tutta larghezza, uno sotto l'altro */
+  #setupPanel .row{flex-direction:column;align-items:stretch;}
+  #setupPanel .row button{width:100%;min-height:52px;font-size:1.05rem;}
+  .btncol{display:flex;flex-direction:column;gap:8px;}
+  .btncol button{width:100%;}
 
-  .subhead{color:var(--text);font-size:1rem;margin:0 0 20px;line-height:1.5;}
+  .subhead{color:var(--text);font-size:.8rem;margin:0 0 14px;line-height:1.4;}
   .subhead code{font-family:var(--mono);border:2px solid var(--line);padding:0 6px;border-radius:4px;font-size:.95rem;}
 
   .panel{background:var(--bg);border:3px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px;}
@@ -151,13 +161,12 @@
   <header class="top">
     <a class="home" href="./">← Home</a>
     <h1><span class="dot">▣</span> Registra</h1>
-    <span id="statusPill" class="status-pill locked" role="status" aria-live="polite">bloccato — nessun vault caricato</span>
+    <div class="state">
+      <span id="statusPill" class="status-pill locked" role="status" aria-live="polite">bloccato</span>
+      <button class="small danger hidden" id="btnLock">Blocca</button>
+    </div>
   </header>
-  <p class="subhead">
-    Password manager locale.<BR>
-	Se chiudi la pagina senza esportare, le modifiche vengono perse.<BR>
-	Non esiste recupero della master password.
-  </p>
+  <p class="subhead hidden" id="subhead">Se chiudi senza esportare, le modifiche vanno perse. Non esiste recupero della master password.</p>
 
   <!-- SETUP PANEL -->
   <div id="setupPanel" style="margin-bottom:16px;">
@@ -212,24 +221,23 @@
 
   <!-- VAULT PANEL -->
   <div class="panel hidden" id="vaultPanel">
-    <div class="row" style="justify-content:space-between;">
-      <h2 style="margin:0;" id="vaultTitle" tabindex="-1">Credenziali (<span id="entryCount">0</span>)</h2>
-      <div class="row" style="gap:8px;">
+    <div>
+      <h2 style="margin:0 0 10px;" id="vaultTitle" tabindex="-1">Credenziali (<span id="entryCount">0</span>)</h2>
+      <div class="btncol">
         <button class="small" id="btnAddEntry">+ Nuova voce</button>
-        <button class="small primary" id="btnExport">Esporta vault (PNG)</button>
-        <button class="small danger" id="btnExportTxt">Esporta vault (TXT, in chiaro)</button>
+        <button class="small primary" id="btnExport">Esporta (PNG)</button>
+        <button class="small danger" id="btnExportTxt">Esporta (TXT, in chiaro)</button>
         <button class="small danger" id="btnImportTxt">Importa (TXT, in chiaro)</button>
         <input type="file" id="fileImportTxt" accept=".txt,text/plain" class="hidden">
         <button class="small" id="btnCheckPw">Controlla password</button>
         <button class="small hidden" id="btnBioToggle">Attiva sblocco con impronta</button>
-        <button class="small danger" id="btnLock">Blocca</button>
       </div>
     </div>
 
     <div class="gauge"><div class="gauge-fill" id="capacityFill"></div></div>
     <div class="gauge-label" id="capacityLabel">capienza: —</div>
 
-    <div class="row" style="margin-top:10px;margin-bottom:4px;">
+    <div class="btncol" style="margin-top:10px;margin-bottom:4px;">
       <button class="small" id="btnRegenCover">Rigenera immagine (dimensione calcolata sui dati attuali)</button>
     </div>
     <div class="msg" role="status" aria-live="polite" id="coverActionMsg"></div>
