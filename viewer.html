@@ -50,6 +50,9 @@
   button.primary:disabled{background:var(--bg);color:#5f7286;border-color:#5f7286;}
   button.danger{border-color:var(--err);color:var(--err);background:var(--bg);}
   button.big{width:100%;min-height:52px;font-size:1.05rem;}
+  /* Regola unica dell'app: fondo grigio-blu = tasti che fanno qualcosa; senza fondo = Annulla, Blocca, Home
+     e i tasti piccoli dentro le voci o accanto ai campi (mostra, copia). */
+  #btnBio, #btnUsePw{background:var(--btn);}
   button.sm{min-height:44px;padding:0 14px;font-size:.9rem;}
   .pwrow{display:flex;gap:10px;flex-wrap:wrap;}
   .pwrow input{flex:1 1 200px;min-width:0;}

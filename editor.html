@@ -63,8 +63,10 @@
   .btncol button{width:100%;}
   /* righina corta tra i gruppi di tasti */
   .btncol .sep{height:2px;width:60%;margin:8px auto;background:var(--line);opacity:.6;}
-  /* fondo grigio-blu per tutti i tasti funzionali (non per Home, Blocca e i tasti delle voci) */
-  #setupPanel button, #coverPanel button:not(.ghost), #vaultPanel .btncol button{background:var(--btn);}
+  /* Regola unica dell'app: fondo grigio-blu = tasti che fanno qualcosa; senza fondo = Annulla, Blocca, Home
+     e i tasti piccoli dentro le voci o accanto ai campi (mostra, copia, modifica, elimina). */
+  #setupPanel button, #coverPanel button:not(.ghost), #vaultPanel .btncol button,
+  .modal-actions button:not(.ghost), #btnBioPwPrompt, #btnAddField, #btnGenInModal{background:var(--btn);}
 
   .subhead{color:var(--text);font-size:.8rem;margin:0 0 14px;line-height:1.4;}
   .subhead code{font-family:var(--mono);border:2px solid var(--line);padding:0 6px;border-radius:4px;font-size:.95rem;}
