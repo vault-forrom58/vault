@@ -109,7 +109,7 @@
   }
 
   // ---------- crypto: vedi vault-crypto.js ----------
-  const { STEGO_HEADER_BYTES, encryptVault, embedPayload, capacityBytes, openVault } = window.VaultCrypto;
+  const { STEGO_HEADER_BYTES, encryptVault, decryptVault, embedPayload, capacityBytes, openVault } = window.VaultCrypto;
 
   // ---------- image helpers ----------
   function loadImageFromFile(file){
@@ -445,6 +445,8 @@
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
+    if (!confirmDiscardSuspended()) return;
+    setResumeMode(false);
     pendingImportFile = file;
     $('importPw').value = '';
     hidePw($('importPw'));
@@ -468,11 +470,12 @@
     $('importPw').value = '';
     closeModal($('pwPromptBg'));
     pendingImportFile = null;
+    setResumeMode(false);
   });
 
   $('btnConfirmPwPrompt').addEventListener('click', () => unlockImport($('importPw').value));
   $('btnBioPwPrompt').addEventListener('click', async () => {
-    if (unlocking || !pendingImportFile) return;
+    if (unlocking || (!pendingImportFile && !resumeMode)) return;
     let pw;
     try{ pw = await VaultBio.getPassword(); }
     catch(err){ showMsg($('pwPromptMsg'), VaultBio.messageFor(err), 'err'); return; }
@@ -482,6 +485,7 @@
   async function unlockImport(pw){
     if (unlocking) return;
     const pwMsg = $('pwPromptMsg');
+    if (resumeMode){ return resumeUnlock(pw); }
     if (!pendingImportFile){ return; }
     setUnlocking(true);
     showMsg(pwMsg, 'Sblocco in corso, attendere…', 'warn');
@@ -1240,7 +1244,19 @@
   // ---------- lock ----------
   $('btnLock').addEventListener('click', () => {
     if (dirty && !confirm('Ci sono modifiche NON esportate: bloccando andranno perse. Bloccare comunque?')) return;
+    clearSuspended();
+    lockNow();
+    $('btnImportVault').focus();
+  });
+  // Toglie dalla memoria e dallo schermo tutto ciò che è in chiaro
+  function lockNow(){
     VaultSafety.clearClipboardNow();
+    document.querySelectorAll('.modal-bg.show').forEach(bg => bg.classList.remove('show'));
+    document.querySelector('.wrap').inert = false;
+    ['entryId','entrySite','entryUser','entryPass','entryNotes'].forEach(id => { $(id).value = ''; });
+    xfList.innerHTML = '';
+    $('chkWeakList').textContent = ''; $('chkSameList').textContent = '';
+    entryBody.textContent = '';
     dirty = false;
     openIds.clear();
     vault = null;
@@ -1252,15 +1268,109 @@
     setupPanel.classList.remove('hidden');
     setStatus(false, 'bloccato');
     clearMsg(vaultMsg);
-    $('btnImportVault').focus();
-  });
+  }
 
-  // Blocco automatico: solo se non ci sono modifiche da esportare e nessuna finestra è aperta
-  // (mai perdere lavoro non salvato).
-  VaultSafety.startAutoLock((reason) => {
-    $('btnLock').click();
-    showMsg($('setupMsg'), 'Vault bloccato per sicurezza: ' + (reason === 'sfondo' ? 'l\'app è rimasta in secondo piano più di un minuto' : 'nessuna attività per ' + VaultSafety.INACTIVITY_MINUTES + ' minuti') + '. Non c\'erano modifiche da esportare.', 'warn');
-  }, () => !!vault && !dirty && !document.querySelector('.modal-bg.show'));
+  // ---------- blocco automatico con ripresa ----------
+  // Al blocco automatico si "fotografa" il punto in cui si era (voci con modifiche non
+  // esportate, finestra aperta con il testo scritto, schede aperte), lo si cifra con la
+  // master password (stessa cifratura del PNG) e si tiene solo cifrato nella scheda del
+  // browser (sessionStorage). Allo sblocco si riparte da lì.
+  const RESUME_KEY = 'vault-ripresa';
+  let resumeMode = false;
+  const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  function getSuspended(){ try{ const s = sessionStorage.getItem(RESUME_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+  function clearSuspended(){ try{ sessionStorage.removeItem(RESUME_KEY); }catch(e){} $('btnResume').classList.add('hidden'); }
+  function confirmDiscardSuspended(){
+    const s = getSuspended();
+    if (!s) return true;
+    if (s.dirty && !confirm('C\'è un lavoro sospeso con modifiche NON esportate. Scartarlo e continuare?')) return false;
+    clearSuspended();
+    return true;
+  }
+  function setResumeMode(on, info){
+    resumeMode = on;
+    $('pwPromptTitle').textContent = on ? 'Riprendi da dove eri' : 'Sblocca vault';
+    $('pwPromptInfo').textContent = info || '';
+    $('pwPromptInfo').classList.toggle('hidden', !on || !info);
+  }
+  function openResumePrompt(info){
+    setResumeMode(true, info);
+    pendingImportFile = null;
+    $('importPw').value = '';
+    hidePw($('importPw'));
+    clearMsg($('pwPromptMsg'));
+    const bio = window.VaultBio && VaultBio.isEnabled();
+    $('btnBioPwPrompt').classList.toggle('hidden', !bio);
+    openModal($('pwPromptBg'), bio ? $('btnBioPwPrompt') : $('importPw'));
+  }
+  function captureState(){
+    const st = { vault, dirty, openIds: [...openIds], searchTerm, scrollY: Math.round(window.scrollY), cover: coverCanvas ? coverCanvas.toDataURL('image/png') : null, modal: null };
+    if (entryModalBg.classList.contains('show')){
+      st.modal = { type: 'entry', title: $('entryModalTitle').textContent, id: $('entryId').value, site: $('entrySite').value, user: $('entryUser').value,
+        pass: $('entryPass').value, notes: $('entryNotes').value,
+        rows: [...xfList.querySelectorAll('.xf-row')].map(r => ({ name: r.querySelector('.xf-name').value, value: r.querySelector('.xf-value').value, secret: r.querySelector('.xf-secret').checked })) };
+    } else if (checkBg.classList.contains('show')) st.modal = { type: 'check' };
+    return st;
+  }
+  async function suspendAndLock(reason){
+    const pw = masterPassword, st = captureState();
+    lockNow();                                   // subito: niente più in chiaro sullo schermo
+    const why = reason === 'sfondo' ? 'l\'app è rimasta in secondo piano più di un minuto' : 'nessuna attività per ' + VaultSafety.INACTIVITY_MINUTES + ' minuti';
+    try{
+      const e = await encryptVault(pw, st);
+      sessionStorage.setItem(RESUME_KEY, JSON.stringify({ it: e.iterations, salt: b64(e.salt), iv: b64(e.iv), ct: b64(e.ciphertext), dirty: !!st.dirty }));
+    }catch(err){
+      showMsg(setupMsg, 'Vault bloccato per sicurezza: ' + why + '. Non è stato possibile conservare il punto in cui eri.', 'err');
+      return;
+    }
+    $('btnResume').classList.remove('hidden');
+    openResumePrompt('Vault bloccato per sicurezza: ' + why + '. Sblocca per riprendere esattamente da dove eri.');
+  }
+  async function resumeUnlock(pw){
+    const pwMsg = $('pwPromptMsg');
+    const s = getSuspended();
+    if (!s){ setResumeMode(false); closeModal($('pwPromptBg')); showMsg(setupMsg, 'Il lavoro sospeso non c\'è più. Carica il vault (PNG).', 'warn'); return; }
+    setUnlocking(true);
+    showMsg(pwMsg, 'Sblocco in corso, attendere…', 'warn');
+    let st;
+    try{ st = await decryptVault(pw, s.it, unb64(s.salt), unb64(s.iv), unb64(s.ct)); }
+    catch(err){ setUnlocking(false); showMsg(pwMsg, 'Password errata.', 'err'); $('importPw').focus(); return; }
+    try{ coverCanvas = st.cover ? canvasFromImage(await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = st.cover; })) : null; }
+    catch(err){ coverCanvas = null; }
+    vault = st.vault; masterPassword = pw;
+    openIds.clear(); (st.openIds || []).forEach(id => openIds.add(id));
+    searchTerm = st.searchTerm || ''; searchInput.value = searchTerm;
+    $('importPw').value = '';
+    setUnlocking(false); clearMsg(pwMsg);
+    closeModal($('pwPromptBg')); setResumeMode(false);
+    clearSuspended();
+    clearMsg(setupMsg);
+    setupPanel.classList.add('hidden'); coverPanel.classList.add('hidden');
+    vaultPanel.classList.remove('hidden');
+    setDirty(!!st.dirty);
+    if (!st.dirty) setStatus(true, 'sbloccato');
+    renderEntries(); updateCapacityGauge();
+    window.scrollTo(0, st.scrollY || 0);
+    const m = st.modal;
+    if (m && m.type === 'entry'){
+      openEntryModal({ id: m.id, site: m.site, user: m.user, pass: m.pass, notes: m.notes, fields: [] });
+      $('entryModalTitle').textContent = m.title; $('entryId').value = m.id;
+      xfList.innerHTML = ''; (m.rows || []).forEach(r => addFieldRow(r)); renumberFieldRows();
+    } else if (m && m.type === 'check') $('btnCheckPw').click();
+    else $('vaultTitle').focus({ preventScroll: true });
+  }
+  $('btnResume').addEventListener('click', () => { if (getSuspended()) openResumePrompt('Sblocca per riprendere da dove eri.'); else clearSuspended(); });
+  $('btnNewVault').addEventListener('click', (e) => { if (!confirmDiscardSuspended()){ e.stopImmediatePropagation(); } }, true);
+  // Riapertura della scheda (es. Android ha chiuso Chrome): il lavoro sospeso cifrato è ancora lì
+  if (getSuspended()){
+    $('btnResume').classList.remove('hidden');
+    openResumePrompt('C\'è un lavoro sospeso. Sblocca per riprendere da dove eri.');
+  }
+
+  // Blocco automatico (5 minuti senza attività o più di 1 minuto in secondo piano), sempre:
+  // il punto in cui si era viene conservato cifrato e ripreso allo sblocco.
+  VaultSafety.startAutoLock((reason) => { suspendAndLock(reason); }, () => !!vault && !!masterPassword && !exporting);
 
 })();
 
