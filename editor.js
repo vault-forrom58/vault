@@ -1198,8 +1198,7 @@
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'chk-item';
     const n = document.createElement('span'); n.textContent = e.site || 'Senza titolo';
-    const g = document.createElement('span'); g.className = 'go'; g.textContent = 'apri ›'; g.setAttribute('aria-hidden', 'true');
-    b.appendChild(n); b.appendChild(g);
+    b.appendChild(n);
     b.setAttribute('aria-label', 'apri la voce ' + (e.site || 'senza titolo'));
     b.addEventListener('click', () => goToEntry(e.id));
     return b;
