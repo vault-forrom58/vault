@@ -20,6 +20,11 @@
     clipTimer = setTimeout(clearClipboardNow, CLIPBOARD_MS);
   }
 
+  // Anche la copia fatta a mano (pressione lunga → "Copia", oppure Ctrl+C sul PC)
+  // fa partire lo svuotamento degli appunti dopo 1 minuto.
+  document.addEventListener('copy', clipboardCopied, true);
+  document.addEventListener('cut', clipboardCopied, true);
+
   // ---------- blocco automatico ----------
   let lastActivity = Date.now(), hiddenAt = null, onLock = null, canLock = null, timer = null;
   const touch = () => { lastActivity = Date.now(); };

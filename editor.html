@@ -153,7 +153,21 @@
   .modal{background:var(--bg);border:3px solid var(--accent);border-radius:8px;padding:18px;max-width:560px;width:100%;max-height:100%;overflow-y:auto;}
   .modal h3{margin:0 0 14px;font-size:1.25rem;color:var(--accent);}
   .modal .row{margin-bottom:14px;}
-  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+  .modal-actions button{flex:1;min-width:0;}
+  /* finestra Controllo password */
+  .chk-cnt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .chk-c{border:3px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center;color:var(--accent);}
+  .chk-c b{display:block;font-size:1.6rem;line-height:1.2;}
+  .chk-c span{font-size:.85rem;font-weight:700;}
+  .chk-c.strong{border-color:var(--ok);color:var(--ok);} .chk-c.weak{border-color:var(--err);color:var(--err);}
+  .chk-h{margin:18px 0 6px;font-size:1rem;color:var(--accent);} .chk-h.weak{color:var(--err);}
+  .chk-item{display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;min-height:44px;padding:6px 12px;border:2px solid var(--dim);border-radius:8px;background:var(--bg);color:var(--text);font-size:.95rem;text-align:left;}
+  .chk-item .go{color:var(--accent);font-size:.85rem;flex-shrink:0;}
+  .chk-grp{border:2px solid var(--dim);border-radius:8px;padding:4px 8px 8px;margin-top:6px;}
+  .chk-grp .chk-item{border:none;min-height:40px;padding:4px 4px;margin-top:2px;}
+  .chk-none{font-size:.95rem;color:var(--ok);margin:4px 0;}
+  .chk-note{font-size:.85rem;color:var(--accent);margin:14px 0 0;}
 
   .strength-row{display:flex;gap:10px;align-items:center;margin-top:4px;}
   .charset-opts{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;}
@@ -320,6 +334,26 @@
     <div class="modal-actions">
       <button class="ghost" id="btnCancelEntry">Annulla</button>
       <button class="primary" id="btnSaveEntry">Salva voce</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTROLLO PASSWORD -->
+<div class="modal-bg" id="checkBg">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="checkTitle">
+    <h3 id="checkTitle" tabindex="-1">Controllo password</h3>
+    <div class="chk-cnt">
+      <div class="chk-c strong"><b id="chkStrong">0</b><span>robuste</span></div>
+      <div class="chk-c fair"><b id="chkFair">0</b><span>accettabili</span></div>
+      <div class="chk-c weak"><b id="chkWeak">0</b><span>deboli</span></div>
+    </div>
+    <h4 class="chk-h weak" id="chkWeakTitle">Deboli</h4>
+    <div id="chkWeakList"></div>
+    <h4 class="chk-h" id="chkSameTitle">Uguali tra loro</h4>
+    <div id="chkSameList"></div>
+    <p class="chk-note">Tocca un nome per aprire la voce e modificarla.</p>
+    <div class="modal-actions">
+      <button class="ghost" id="btnCloseCheck">Chiudi</button>
     </div>
   </div>
 </div>

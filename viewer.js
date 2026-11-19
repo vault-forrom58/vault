@@ -212,7 +212,6 @@
         } else {
           tf.className = 't'; tf.textContent = f.value || '—';
         }
-        if (f.value) bf.appendChild(copyBtn(function(){ return f.value; }, 'copia ' + fname + ' di ' + nm));
         vf.appendChild(tf); vf.appendChild(bf); ff.appendChild(vf); card.appendChild(ff);
       });
 

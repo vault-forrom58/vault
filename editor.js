@@ -576,6 +576,7 @@
       const tr = document.createElement('tr');
       const nm = entry.site || 'voce senza nome';
       const isOpen = openIds.has(entry.id);
+      tr.dataset.id = entry.id;
       if (!isOpen) tr.classList.add('closed');
 
       // Titolo = pulsante che apre/chiude la scheda
@@ -662,7 +663,7 @@
         const st = document.createElement('div');
         st.className = 'pw-strength ' + r.cls;
         const twins = vault.entries.filter(x => x !== entry && x.pass === entry.pass).length;
-        st.textContent = r.word + (twins ? ' — uguale ad altre ' + twins + (twins === 1 ? ' voce' : ' voci') : '');
+        st.textContent = r.word + (twins === 1 ? ' — uguale a un\'altra voce' : twins ? ' — uguale ad altre ' + twins + ' voci' : '');
         tdPass.appendChild(st);
       }
       tr.appendChild(tdPass);
@@ -701,7 +702,6 @@
           span.textContent = f.value || '—';
           cell.appendChild(span);
         }
-        if (f.value) cell.appendChild(makeCopyButton(() => f.value, 'copia ' + fname + ' di ' + nm));
         td.appendChild(cell);
         tr.appendChild(td);
       });
@@ -718,7 +718,7 @@
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'cell-actions';
       const btnEdit = document.createElement('button');
-      btnEdit.className = 'small ghost';
+      btnEdit.className = 'small ghost btn-edit';
       btnEdit.textContent = 'modifica';
       btnEdit.setAttribute('aria-label', 'modifica ' + nm);
       btnEdit.addEventListener('click', () => openEntryModal(entry));
@@ -804,6 +804,7 @@
     if (e.key !== 'Escape') return;
     if (entryModalBg.classList.contains('show')) closeModal(entryModalBg);
     else if ($('pwPromptBg').classList.contains('show')) $('btnCancelPwPrompt').click();
+    else if (checkBg.classList.contains('show')) closeModal(checkBg);
   });
 
   $('btnGenInModal').addEventListener('click', () => {
@@ -1187,24 +1188,54 @@
     showMsg(vaultMsg, msg, (added || duplicates) ? 'warn' : 'err');
   });
 
-  // ---------- controllo di tutte le password ----------
+  // ---------- controllo di tutte le password: finestra in alto ----------
+  const checkBg = $('checkBg');
+  function checkItem(e){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chk-item';
+    const n = document.createElement('span'); n.textContent = e.site || 'Senza titolo';
+    const g = document.createElement('span'); g.className = 'go'; g.textContent = 'apri ›'; g.setAttribute('aria-hidden', 'true');
+    b.appendChild(n); b.appendChild(g);
+    b.setAttribute('aria-label', 'apri la voce ' + (e.site || 'senza titolo'));
+    b.addEventListener('click', () => goToEntry(e.id));
+    return b;
+  }
+  // Chiude la finestra, apre la voce nell'elenco e porta lì, sul tasto "modifica"
+  function goToEntry(id){
+    closeModal(checkBg);
+    if (searchInput.value){ searchInput.value = ''; searchTerm = ''; }
+    openIds.add(id);
+    renderEntries();
+    const tr = entryBody.querySelector('tr[data-id="' + CSS.escape(String(id)) + '"]');
+    if (!tr) return;
+    tr.scrollIntoView({ block: 'start' });
+    const edit = tr.querySelector('.btn-edit');
+    if (edit) edit.focus({ preventScroll: true });
+  }
   $('btnCheckPw').addEventListener('click', () => {
     clearMsg(vaultMsg);
-    if (!vault){ showMsg(vaultMsg, 'Nessun vault attivo.', 'err'); return; }
+    if (!vault) return;
     const withPw = vault.entries.filter(e => e.pass);
-    if (!withPw.length){ showMsg(vaultMsg, 'Nessuna voce con password da controllare.', 'warn'); return; }
-    const weak = [], cnt = [0, 0, 0];
-    withPw.forEach(e => { const r = rateSitePassword(e.pass); cnt[r.level]++; if (!r.level) weak.push(e.site || 'Senza titolo'); });
+    const byName = (a, b) => (a.site || '').localeCompare(b.site || '', 'it', { sensitivity: 'base', numeric: true });
+    const cnt = [0, 0, 0], weak = [];
+    withPw.forEach(e => { const r = rateSitePassword(e.pass); cnt[r.level]++; if (!r.level) weak.push(e); });
     const groups = new Map();
-    withPw.forEach(e => { if (!groups.has(e.pass)) groups.set(e.pass, []); groups.get(e.pass).push(e.site || 'Senza titolo'); });
-    const same = [...groups.values()].filter(g => g.length > 1);
-    let msg = 'Controllate ' + withPw.length + ' password: ' + cnt[2] + ' robuste, ' + cnt[1] + ' accettabili, ' + cnt[0] + ' deboli.';
-    if (weak.length) msg += ' DEBOLI: ' + weak.join(', ') + '.';
-    if (same.length) msg += ' UGUALI tra loro: ' + same.map(g => g.join(' = ')).join('; ') + '.';
-    else msg += ' Nessuna password ripetuta.';
-    if (!weak.length && !same.length) msg += ' Tutto a posto.';
-    showMsg(vaultMsg, msg, (weak.length || same.length) ? 'warn' : 'ok');
+    withPw.forEach(e => { if (!groups.has(e.pass)) groups.set(e.pass, []); groups.get(e.pass).push(e); });
+    const same = [...groups.values()].filter(g => g.length > 1).map(g => g.sort(byName)).sort((a, b) => byName(a[0], b[0]));
+    $('checkTitle').textContent = 'Controllo password (' + withPw.length + ')';
+    $('chkStrong').textContent = cnt[2]; $('chkFair').textContent = cnt[1]; $('chkWeak').textContent = cnt[0];
+    $('chkWeakTitle').textContent = 'Deboli (' + weak.length + ')';
+    $('chkSameTitle').textContent = 'Uguali tra loro (' + same.length + (same.length === 1 ? ' gruppo)' : ' gruppi)');
+    const wl = $('chkWeakList'), sl = $('chkSameList');
+    wl.textContent = ''; sl.textContent = '';
+    if (!weak.length){ const p = document.createElement('p'); p.className = 'chk-none'; p.textContent = 'Nessuna password debole.'; wl.appendChild(p); }
+    weak.sort(byName).forEach(e => wl.appendChild(checkItem(e)));
+    if (!same.length){ const p = document.createElement('p'); p.className = 'chk-none'; p.textContent = 'Nessuna password ripetuta.'; sl.appendChild(p); }
+    same.forEach(g => { const d = document.createElement('div'); d.className = 'chk-grp'; g.forEach(e => d.appendChild(checkItem(e))); sl.appendChild(d); });
+    openModal(checkBg, $('checkTitle'));
+    checkBg.scrollTop = 0;
   });
+  $('btnCloseCheck').addEventListener('click', () => closeModal(checkBg));
 
   // ---------- lock ----------
   $('btnLock').addEventListener('click', () => {
