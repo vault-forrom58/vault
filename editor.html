@@ -154,7 +154,8 @@
   .modal h3{margin:0 0 14px;font-size:1.25rem;color:var(--accent);}
   .modal .row{margin-bottom:14px;}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
-  .modal-actions button{flex:1;min-width:0;}
+  /* tasti in fondo alle finestre: stessa misura degli altri tasti (come .small), scritta sempre su una riga */
+  .modal-actions button{flex:1;min-width:0;min-height:44px;padding:4px 10px;font-size:.9rem;white-space:nowrap;}
   /* finestra Controllo password */
   .chk-cnt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
   .chk-c{border:3px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center;color:var(--accent);}
