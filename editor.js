@@ -1238,6 +1238,7 @@
     checkBg.scrollTop = 0;
   });
   $('btnCloseCheck').addEventListener('click', () => closeModal(checkBg));
+  $('btnCloseCheckTop').addEventListener('click', () => closeModal(checkBg));
 
   // ---------- lock ----------
   $('btnLock').addEventListener('click', () => {
