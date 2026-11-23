@@ -809,6 +809,7 @@
     if (entryModalBg.classList.contains('show')) closeModal(entryModalBg);
     else if ($('pwPromptBg').classList.contains('show')) $('btnCancelPwPrompt').click();
     else if (checkBg.classList.contains('show')) closeModal(checkBg);
+    else if (shareBg.classList.contains('show')) $('btnShareCancel').click();
   });
 
   $('btnGenInModal').addEventListener('click', () => {
@@ -1192,6 +1193,100 @@
     showMsg(vaultMsg, msg, (added || duplicates) ? 'warn' : 'err');
   });
 
+  // ---------- condividi voci: PNG separato con solo le voci scelte ----------
+  const shareBg = $('shareBg');
+  const shareSel = new Set();
+  function renderShareList(){
+    const q = $('shareSearch').value.trim().toLowerCase();
+    const list = $('shareList'); list.textContent = '';
+    [...vault.entries].sort((a, b) => (a.site || '').localeCompare(b.site || '', 'it', { sensitivity: 'base', numeric: true }))
+      .filter(e => !q || (e.site || '').toLowerCase().includes(q))
+      .forEach(e => {
+        const l = document.createElement('label'); l.className = 'sh-row';
+        const c = document.createElement('input'); c.type = 'checkbox'; c.checked = shareSel.has(e.id);
+        c.addEventListener('change', () => { c.checked ? shareSel.add(e.id) : shareSel.delete(e.id); updateShareCount(); });
+        const n = document.createElement('span'); n.textContent = e.site || 'Senza titolo';
+        l.appendChild(c); l.appendChild(n); list.appendChild(l);
+      });
+  }
+  function updateShareCount(){
+    const n = shareSel.size;
+    $('shareCount').textContent = n ? n + (n === 1 ? ' voce scelta' : ' voci scelte') : 'Nessuna voce scelta';
+  }
+  function shareStep(k){
+    $('shareStep1').classList.toggle('hidden', k !== 1);
+    $('shareStep2').classList.toggle('hidden', k !== 2);
+    $('shareTitle').textContent = k === 1 ? 'Condividi voci' : 'Condividi ' + shareSel.size + (shareSel.size === 1 ? ' voce' : ' voci');
+    shareBg.scrollTop = 0;
+  }
+  function updateSharePwLabel(){
+    const pw = $('sharePw').value, i = passwordStrengthInfo(pw), lb = $('sharePwLabel');
+    lb.textContent = i.label; lb.style.color = i.color;
+  }
+  $('btnShare').addEventListener('click', () => {
+    if (!vault) return;
+    clearMsg(vaultMsg);
+    shareSel.clear(); $('shareSearch').value = ''; $('sharePw').value = '';
+    clearMsg($('shareMsg1')); clearMsg($('shareMsg2'));
+    renderShareList(); updateShareCount(); updateSharePwLabel(); shareStep(1);
+    openModal(shareBg, $('shareTitle'));
+  });
+  $('shareSearch').addEventListener('input', renderShareList);
+  $('btnShareCancel').addEventListener('click', () => { $('sharePw').value = ''; closeModal(shareBg); });
+  $('btnShareNext').addEventListener('click', () => {
+    if (!shareSel.size){ showMsg($('shareMsg1'), 'Scegli almeno una voce.', 'err'); return; }
+    clearMsg($('shareMsg1')); shareStep(2); $('sharePw').focus();
+  });
+  $('btnShareBack').addEventListener('click', () => { clearMsg($('shareMsg2')); shareStep(1); });
+  $('sharePw').addEventListener('input', () => { updateSharePwLabel(); clearMsg($('shareMsg2')); });
+  $('btnShareGen').addEventListener('click', () => {
+    $('sharePw').value = generatePassword(14, { lower: true, upper: true, digits: true, symbols: true });
+    updateSharePwLabel(); clearMsg($('shareMsg2')); announce('Password generata');
+  });
+  $('btnShareExport').addEventListener('click', async () => {
+    if (exporting) return;
+    const pw = $('sharePw').value, msg = $('shareMsg2'), info = passwordStrengthInfo(pw);
+    if (!info.lenOk || !info.entropyOk){ showMsg(msg, 'Password troppo debole: servono almeno ' + MIN_MASTER_PW_LEN + ' caratteri e almeno 2 tipi di carattere.', 'err'); return; }
+    if (pw === masterPassword){ showMsg(msg, 'Deve essere diversa dalla tua master password.', 'err'); return; }
+    // PC: finestra "Salva con nome" che parte da Download (non dalla cartella del tuo vault)
+    let saveHandle = null;
+    const name = 'foto-condivisa-' + exportFileName().slice(5);
+    if (CAN_SAVE_PICKER){
+      try{ saveHandle = await window.showSaveFilePicker({ suggestedName: name, startIn: 'downloads', types: [{ description: 'Immagine PNG', accept: { 'image/png': ['.png'] } }] }); }
+      catch(err){ if (err && err.name === 'AbortError') return; saveHandle = null; }
+    }
+    exporting = true; $('btnShareExport').disabled = true;
+    showMsg(msg, 'Creazione e verifica in corso, attendere…', 'warn');
+    try{
+      const part = Object.assign({}, JSON.parse(JSON.stringify(vault)), { entries: JSON.parse(JSON.stringify(vault.entries.filter(e => shareSel.has(e.id)))) });
+      const snapshot = JSON.stringify(part);
+      const size = computeAutoCoverSize(part);
+      const cover = generateNoiseCanvas(size.width, size.height);
+      const { iterations, salt, iv, ciphertext } = await encryptVault(pw, JSON.parse(snapshot));
+      const img = getCanvasImageData(cover);
+      await embedPayload(img, pw, iterations, salt, iv, ciphertext);
+      const out = document.createElement('canvas'); out.width = img.width; out.height = img.height;
+      out.getContext('2d').putImageData(img, 0, 0);
+      const blob = await canvasToPngBlob(out);
+      if (!(await verifyExportedBlob(blob, pw, snapshot))){
+        showMsg(msg, 'Creazione annullata: la verifica del PNG è fallita. Usa Chrome o Edge.', 'err');
+        if (saveHandle && saveHandle.remove) saveHandle.remove().catch(() => {});
+        return;
+      }
+      let where = '';
+      if (saveHandle){ const w = await saveHandle.createWritable(); await w.write(blob); await w.close(); where = ' Salvato come "' + saveHandle.name + '".'; }
+      else downloadBlob(blob, name);
+      const n = part.entries.length;
+      $('sharePw').value = '';
+      closeModal(shareBg);
+      showMsg(vaultMsg, 'Creato e verificato il vault da condividere con ' + n + (n === 1 ? ' voce.' : ' voci.') + where + ' Mandalo come documento e di\' la password a voce. Il tuo vault non è cambiato.', 'ok');
+    }catch(err){
+      showMsg(msg, 'Errore nella creazione: ' + err.message, 'err');
+    }finally{
+      exporting = false; $('btnShareExport').disabled = false;
+    }
+  });
+
   // ---------- controllo di tutte le password: finestra in alto ----------
   const checkBg = $('checkBg');
   function checkItem(e){
@@ -1265,7 +1360,8 @@
     VaultSafety.clearClipboardNow();
     document.querySelectorAll('.modal-bg.show').forEach(bg => bg.classList.remove('show'));
     document.querySelector('.wrap').inert = false;
-    ['entryId','entrySite','entryUser','entryPass','entryNotes'].forEach(id => { $(id).value = ''; });
+    ['entryId','entrySite','entryUser','entryPass','entryNotes','sharePw'].forEach(id => { $(id).value = ''; });
+    $('shareList').textContent = '';
     xfList.innerHTML = '';
     $('chkWeakList').textContent = ''; $('chkSameList').textContent = '';
     entryBody.textContent = '';

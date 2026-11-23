@@ -66,7 +66,7 @@
   /* Regola unica dell'app: fondo grigio-blu = tasti che fanno qualcosa; senza fondo = Annulla, Blocca, Home
      e i tasti piccoli dentro le voci o accanto ai campi (mostra, copia, modifica, elimina). */
   #setupPanel button, #coverPanel button:not(.ghost), #vaultPanel .btncol button,
-  .modal-actions button:not(.ghost), #btnBioPwPrompt, #btnAddField, #btnGenInModal{background:var(--btn);}
+  .modal-actions button:not(.ghost), #btnBioPwPrompt, #btnAddField, #btnGenInModal, #btnShareGen{background:var(--btn);}
 
   .subhead{color:var(--text);font-size:.8rem;margin:0 0 14px;line-height:1.4;}
   .subhead code{font-family:var(--mono);border:2px solid var(--line);padding:0 6px;border-radius:4px;font-size:.95rem;}
@@ -170,6 +170,8 @@
   .chk-grp{border:3px solid var(--line);border-radius:8px;padding:2px 8px 4px;margin-top:8px;}
   .chk-grp .chk-item{border:none;margin-top:0;padding:4px 4px;}
   .chk-none{font-size:.9rem;color:var(--ok);margin:4px 0;}
+  .sh-row{display:flex;align-items:center;gap:12px;margin-top:8px;min-height:44px;padding:4px 12px;border:3px solid var(--line);border-radius:8px;color:var(--text);font-size:.9rem;font-weight:700;line-height:1.3;cursor:pointer;overflow-wrap:anywhere;}
+  #shareSearch{margin-bottom:4px;}
   .chk-note{font-size:.8rem;color:var(--accent);margin:12px 0 0;}
 
   .strength-row{display:flex;gap:10px;align-items:center;margin-top:4px;}
@@ -252,6 +254,7 @@
         <button class="small" id="btnAddEntry">+ Nuova voce</button>
         <div class="sep" aria-hidden="true"></div>
         <button class="small primary" id="btnExport">Esporta (PNG)</button>
+        <button class="small" id="btnShare">Condividi voci</button>
         <button class="small danger" id="btnExportTxt">Esporta (TXT, in chiaro)</button>
         <div class="sep" aria-hidden="true"></div>
         <button class="small danger" id="btnImportTxt">Importa (TXT, in chiaro)</button>
@@ -338,6 +341,37 @@
     <div class="modal-actions">
       <button class="ghost" id="btnCancelEntry">Annulla</button>
       <button class="primary" id="btnSaveEntry">Salva voce</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONDIVIDI VOCI: crea un PNG separato con solo le voci scelte e una sua master password -->
+<div class="modal-bg" id="shareBg">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <h3 id="shareTitle" tabindex="-1">Condividi voci</h3>
+    <div id="shareStep1">
+      <input type="search" id="shareSearch" placeholder="Cerca" aria-label="cerca voci da condividere" autocomplete="off">
+      <div id="shareList"></div>
+      <p class="chk-note" id="shareCount" aria-live="polite">Nessuna voce scelta</p>
+      <div class="msg" id="shareMsg1" role="status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="ghost" id="btnShareCancel">Annulla</button>
+        <button class="primary" id="btnShareNext">Avanti</button>
+      </div>
+    </div>
+    <div id="shareStep2" class="hidden">
+      <label for="sharePw">Master password del nuovo vault</label>
+      <div class="pw-cell" style="flex-wrap:nowrap;">
+        <input type="text" id="sharePw" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;">
+        <button class="small" id="btnShareGen">Genera</button>
+      </div>
+      <div class="gauge-label" id="sharePwLabel">robustezza: —</div>
+      <p class="chk-note">Sarà la loro master password e non si potrà cambiare: deve essere diversa dalla tua. Dilla a voce, non nello stesso messaggio del file. Il file va mandato come documento (con WhatsApp: "Documento", non "Foto").</p>
+      <div class="msg" id="shareMsg2" role="status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="ghost" id="btnShareBack">Indietro</button>
+        <button class="primary" id="btnShareExport">Esporta</button>
+      </div>
     </div>
   </div>
 </div>
