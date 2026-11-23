@@ -1199,8 +1199,7 @@
     b.type = 'button'; b.className = 'chk-item';
     const n = document.createElement('span'); n.textContent = e.site || 'Senza titolo';
     b.appendChild(n);
-    if (e.user){ const u = document.createElement('small'); u.textContent = e.user; b.appendChild(u); }
-    b.setAttribute('aria-label', 'apri la voce ' + (e.site || 'senza titolo') + (e.user ? ', utente ' + e.user : ''));
+    b.setAttribute('aria-label', 'apri la voce ' + (e.site || 'senza titolo'));
     b.addEventListener('click', () => goToEntry(e.id));
     return b;
   }
