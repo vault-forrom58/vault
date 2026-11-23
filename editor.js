@@ -666,8 +666,8 @@
         const r = rateSitePassword(entry.pass);
         const st = document.createElement('div');
         st.className = 'pw-strength ' + r.cls;
-        const twins = vault.entries.filter(x => x !== entry && x.pass === entry.pass).length;
-        st.textContent = r.word + (twins === 1 ? ' — uguale a un\'altra voce' : twins ? ' — uguale ad altre ' + twins + ' voci' : '');
+        const twins = vault.entries.filter(x => x !== entry && x.pass === entry.pass).map(x => x.site || 'Senza titolo');
+        st.textContent = r.word + (twins.length ? ' — uguale a: ' + twins.slice(0, 3).join(', ') + (twins.length > 3 ? ' e altre ' + (twins.length - 3) : '') : '');
         tdPass.appendChild(st);
       }
       tr.appendChild(tdPass);
@@ -1199,7 +1199,8 @@
     b.type = 'button'; b.className = 'chk-item';
     const n = document.createElement('span'); n.textContent = e.site || 'Senza titolo';
     b.appendChild(n);
-    b.setAttribute('aria-label', 'apri la voce ' + (e.site || 'senza titolo'));
+    if (e.user){ const u = document.createElement('small'); u.textContent = e.user; b.appendChild(u); }
+    b.setAttribute('aria-label', 'apri la voce ' + (e.site || 'senza titolo') + (e.user ? ', utente ' + e.user : ''));
     b.addEventListener('click', () => goToEntry(e.id));
     return b;
   }
@@ -1220,23 +1221,36 @@
     if (!vault) return;
     const withPw = vault.entries.filter(e => e.pass);
     const byName = (a, b) => (a.site || '').localeCompare(b.site || '', 'it', { sensitivity: 'base', numeric: true });
-    const cnt = [0, 0, 0], weak = [];
-    withPw.forEach(e => { const r = rateSitePassword(e.pass); cnt[r.level]++; if (!r.level) weak.push(e); });
+    const cnt = [0, 0, 0], byLevel = [[], [], []];
+    withPw.forEach(e => { const r = rateSitePassword(e.pass); cnt[r.level]++; byLevel[r.level].push(e); });
+    byLevel.forEach(l => l.sort(byName));
     const groups = new Map();
     withPw.forEach(e => { if (!groups.has(e.pass)) groups.set(e.pass, []); groups.get(e.pass).push(e); });
     const same = [...groups.values()].filter(g => g.length > 1).map(g => g.sort(byName)).sort((a, b) => byName(a[0], b[0]));
     $('chkStrong').textContent = cnt[2]; $('chkFair').textContent = cnt[1]; $('chkWeak').textContent = cnt[0];
-    $('chkWeakTitle').textContent = 'Deboli (' + weak.length + ')';
-    $('chkSameTitle').textContent = 'Uguali tra loro (' + same.length + (same.length === 1 ? ' gruppo)' : ' gruppi)');
-    const wl = $('chkWeakList'), sl = $('chkSameList');
-    wl.textContent = ''; sl.textContent = '';
-    if (!weak.length){ const p = document.createElement('p'); p.className = 'chk-none'; p.textContent = 'Nessuna password debole.'; wl.appendChild(p); }
-    weak.sort(byName).forEach(e => wl.appendChild(checkItem(e)));
+    checkData = byLevel;
+    showCheckLevel(0);
+    $('chkSameTitle').textContent = 'Password ripetute su più voci (' + same.length + (same.length === 1 ? ' gruppo)' : ' gruppi)');
+    const sl = $('chkSameList');
+    sl.textContent = '';
     if (!same.length){ const p = document.createElement('p'); p.className = 'chk-none'; p.textContent = 'Nessuna password ripetuta.'; sl.appendChild(p); }
     same.forEach(g => { const d = document.createElement('div'); d.className = 'chk-grp'; g.forEach(e => d.appendChild(checkItem(e))); sl.appendChild(d); });
     openModal(checkBg, $('checkTitle'));
     checkBg.scrollTop = 0;
   });
+  // I tre numeri sono tasti: mostrano l'elenco delle robuste, accettabili o deboli
+  let checkData = [[], [], []];
+  const LEVEL_NAME = ['Deboli', 'Accettabili', 'Robuste'], LEVEL_CLS = ['weak', 'fair', 'strong'], LEVEL_NONE = ['Nessuna password debole.', 'Nessuna password accettabile.', 'Nessuna password robusta.'];
+  function showCheckLevel(lv){
+    document.querySelectorAll('#checkBg .chk-c').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.level === lv)));
+    const t = $('chkWeakTitle');
+    t.textContent = LEVEL_NAME[lv] + ' (' + checkData[lv].length + ')';
+    t.className = 'chk-h ' + LEVEL_CLS[lv];
+    const wl = $('chkWeakList'); wl.textContent = '';
+    if (!checkData[lv].length){ const p = document.createElement('p'); p.className = 'chk-none'; p.textContent = LEVEL_NONE[lv]; wl.appendChild(p); }
+    checkData[lv].forEach(e => wl.appendChild(checkItem(e)));
+  }
+  document.querySelectorAll('#checkBg .chk-c').forEach(b => b.addEventListener('click', () => showCheckLevel(+b.dataset.level)));
   $('btnCloseCheck').addEventListener('click', () => closeModal(checkBg));
   $('btnCloseCheckTop').addEventListener('click', () => closeModal(checkBg));
 
